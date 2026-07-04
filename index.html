@@ -220,15 +220,37 @@
         }
 
         // Hàm lõi phụ trách phát âm văn bản tiếng Việt
-        function speak(text) {
-            if ('speechSynthesis' in window && text) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'vi-VN';
-                utterance.rate = 1.0; 
-                utterance.pitch = 1.0;
-                window.speechSynthesis.speak(utterance);
-            }
+function speak(text) {
+    if ('speechSynthesis' in window && text) {
+        // Dừng các âm thanh cũ để tránh xung đột
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        // Lấy tất cả các giọng đọc có sẵn trong trình duyệt
+        const voices = window.speechSynthesis.getVoices();
+        
+        // Tìm giọng đọc nào hỗ trợ tiếng Việt (vi-VN hoặc vi_VN)
+        const viVoice = voices.find(voice => voice.lang.includes('vi'));
+
+        if (viVoice) {
+            utterance.voice = viVoice; // Gán chính xác giọng tiếng Việt
+            utterance.lang = viVoice.lang;
+        } else {
+            // Nếu không tìm thấy giọng cấu hình sẵn, dùng fallback mặc định
+            utterance.lang = 'vi-VN';
         }
+
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+// Kích hoạt một danh sách trống để Chrome nạp sẵn bộ Voices ngay khi tải trang
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+}
     </script>
 
 </body>
