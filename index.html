@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ứng Dụng Dịch Tiếng Anh Sang Tiếng Việt</title>
+    <title>Ứng Dụng Dịch Thuật Thông Minh</title>
     <style>
         /* --- Reset & Thiết lập chung --- */
         * {
@@ -69,6 +69,34 @@
             font-size: 12px;
         }
 
+        /* Nút Micro */
+        .btn-mic {
+            margin-left: auto;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 2px 6px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .btn-mic:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Hiệu ứng nhấp nháy đỏ khi đang ghi âm */
+        .btn-mic.recording {
+            animation: pulse 1.2s infinite;
+            background-color: #ffcccc;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
         textarea {
             width: 100%;
             height: 180px;
@@ -90,9 +118,9 @@
             color: #2c3e50;
         }
 
-        /* --- Tùy chọn Tự động phát âm (Auto Speak Toggle) --- */
+        /* --- Tùy chọn Tự động phát âm --- */
         .auto-speak-container {
-            margin-left: auto; /* Đẩy sang bên phải góc hộp */
+            margin-left: auto;
             display: flex;
             align-items: center;
             gap: 5px;
@@ -145,23 +173,21 @@
 <body>
 
     <div class="translator-container">
-        <h1>Ứng Dụng Dịch Thuật & Phát Âm</h1>
+        <h1>Ứng Dụng Dịch Thuật Thông Minh</h1>
         
         <div class="boxes-wrapper">
-            <!-- Hộp nhập tiếng Anh -->
             <div class="box">
                 <div class="box-header">
                     Tiếng Anh <span class="language-badge">EN</span>
+                    <button id="btn-mic" class="btn-mic" onclick="toggleSpeechRecognition()" title="Nói tiếng Anh">🎤</button>
                 </div>
-                <textarea id="input-text" placeholder="Nhập hoặc dán đoạn văn tiếng Anh vào đây..."></textarea>
+                <textarea id="input-text" placeholder="Nhập văn bản hoặc bấm Micro để nói tiếng Anh..."></textarea>
             </div>
             
-            <!-- Hộp hiển thị tiếng Việt -->
             <div class="box">
                 <div class="box-header">
                     Tiếng Việt <span class="language-badge" style="background-color: #e74c3c;">VI</span>
                     
-                    <!-- Khu vực nút chọn tự động đọc -->
                     <label class="auto-speak-container">
                         <input type="checkbox" id="auto-speak-cb" checked>
                         <span>Dịch xong đọc luôn 🔊</span>
@@ -171,16 +197,85 @@
             </div>
         </div>
 
-        <!-- Nút kích hoạt dịch -->
         <div class="button-zone">
             <button class="btn-translate" onclick="translateText()">Dịch Ngay</button>
         </div>
     </div>
 
     <script>
-// Cấu hình URL Google Apps Script của bạn tại đây
+        // Cấu hình URL Google Apps Script của bạn tại đây
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyKO9ySTedNJqJ-uv9MFNtGFC8DPtf3jPP4pV0pL0zIAng661rZ70_YcgUeAmOpdiEI/exec";
+        
+        let recognition;
+        let isRecording = false;
 
+        // 1. KHỞI TẠO TÍNH NĂNG NHẬN DIỆN GIỌNG NÓI (SPEECH RECOGNITION)
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            recognition.continuous = false; // Chỉ nghe một câu ngắn rồi dừng
+            recognition.interimResults = false; // Không lấy kết quả tạm thời
+            recognition.lang = 'en-US'; // Đặt ngôn ngữ nhận diện là TIẾNG ANH
+
+            // Khi nhận diện thành công và trả về văn bản
+            recognition.onresult = function(event) {
+                const resultText = event.results[0][0].transcript;
+                document.getElementById('input-text').value = resultText;
+                stopRecordingStyle();
+            };
+
+            // Khi có lỗi xảy ra (ví dụ: không nói gì, chặn quyền mic)
+            recognition.onerror = function(event) {
+                console.error("Lỗi nhận diện:", event.error);
+                stopRecordingStyle();
+                if(event.error === 'not-allowed') {
+                    alert("Bạn cần cấp quyền truy cập Micro cho trang web!");
+                }
+            };
+
+            // Khi quá trình ghi âm kết thúc tự động
+            recognition.onend = function() {
+                stopRecordingStyle();
+            };
+        } else {
+            // Nếu trình duyệt không hỗ trợ (ví dụ một số bản Firefox cũ)
+            document.getElementById('btn-mic').style.display = 'none';
+            console.log("Trình duyệt không hỗ trợ nhận diện giọng nói.");
+        }
+
+        // Hàm bật/tắt ghi âm khi bấm nút Micro
+        function toggleSpeechRecognition() {
+            if (!recognition) return;
+
+            if (isRecording) {
+                recognition.stop();
+                stopRecordingStyle();
+            } else {
+                // Xóa chữ cũ trong ô nhập liệu trước khi nói
+                document.getElementById('input-text').value = "";
+                document.getElementById('input-text').placeholder = "Đang lắng nghe... Hãy nói tiếng Anh!";
+                
+                // Đổi trạng thái giao diện nút bấm
+                const micBtn = document.getElementById('btn-mic');
+                micBtn.classList.add('recording');
+                micBtn.innerText = "🛑";
+                isRecording = true;
+
+                recognition.start();
+            }
+        }
+
+        function stopRecordingStyle() {
+            const micBtn = document.getElementById('btn-mic');
+            micBtn.classList.remove('recording');
+            micBtn.innerText = "🎤";
+            document.getElementById('input-text').placeholder = "Nhập văn bản hoặc bấm Micro để nói tiếng Anh...";
+            isRecording = false;
+        }
+
+
+        // 2. HÀM DỊCH VĂN BẢN (GOOGLE APPS SCRIPT)
         async function translateText() {
             const inputText = document.getElementById('input-text').value.trim();
             const outputText = document.getElementById('output-text');
@@ -190,7 +285,6 @@
                 return;
             }
 
-            // Dừng ngay lập tức bất kỳ giọng đọc nào đang chạy dở trước đó
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
@@ -205,7 +299,6 @@
                 if (data.status === "success") {
                     outputText.value = data.translated_text;
                     
-                    // Kiểm tra xem người dùng có chọn "Dịch xong đọc luôn" không
                     const isAutoSpeak = document.getElementById('auto-speak-cb').checked;
                     if (isAutoSpeak) {
                         speak(data.translated_text);
@@ -219,38 +312,32 @@
             }
         }
 
-        // Hàm lõi phụ trách phát âm văn bản tiếng Việt
-function speak(text) {
-    if ('speechSynthesis' in window && text) {
-        // Dừng các âm thanh cũ để tránh xung đột
-        window.speechSynthesis.cancel();
+        // 3. HÀM PHÁT ÂM TIẾNG VIỆT (ĐÃ SỬA LỖI GIỌNG ĐỌC TRÊN GITHUB)
+        function speak(text) {
+            if ('speechSynthesis' in window && text) {
+                window.speechSynthesis.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0; 
+                utterance.pitch = 1.0;
 
-        // Lấy tất cả các giọng đọc có sẵn trong trình duyệt
-        const voices = window.speechSynthesis.getVoices();
-        
-        // Tìm giọng đọc nào hỗ trợ tiếng Việt (vi-VN hoặc vi_VN)
-        const viVoice = voices.find(voice => voice.lang.includes('vi'));
+                const voices = window.speechSynthesis.getVoices();
+                const viVoice = voices.find(voice => voice.lang.includes('vi'));
 
-        if (viVoice) {
-            utterance.voice = viVoice; // Gán chính xác giọng tiếng Việt
-            utterance.lang = viVoice.lang;
-        } else {
-            // Nếu không tìm thấy giọng cấu hình sẵn, dùng fallback mặc định
-            utterance.lang = 'vi-VN';
+                if (viVoice) {
+                    utterance.voice = viVoice;
+                    utterance.lang = viVoice.lang;
+                } else {
+                    utterance.lang = 'vi-VN';
+                }
+
+                window.speechSynthesis.speak(utterance);
+            }
         }
 
-        window.speechSynthesis.speak(utterance);
-    }
-}
-
-// Kích hoạt một danh sách trống để Chrome nạp sẵn bộ Voices ngay khi tải trang
-if ('speechSynthesis' in window) {
-    window.speechSynthesis.getVoices();
-}
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+        }
     </script>
 
 </body>
