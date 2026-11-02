@@ -13,24 +13,47 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        
         body {
-            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             color: #333;
+            overflow-x: hidden;
+            /* Tạo một màu nền gradient dự phòng trước khi ảnh nền tải xong */
+            background: linear-gradient(135deg, #1f1c2c, #928dab); 
         }
 
-        /* --- Container chính --- */
+        /* --- Xử lý hình nền mờ ảo (Transparent 30%) --- */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Sử dụng ảnh phong cảnh thiên nhiên mờ ảo từ Unsplash */
+            background-image: url('https://github.com/thanhletan55-bot/ThanhMaiClock/raw/refs/heads/main/Peppy2026.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            /* Thiết lập độ trong suốt chuẩn 30% theo yêu cầu */
+            opacity: 0.30; 
+            /* Thêm hiệu ứng lướt nhẹ cho lớp nền trông có chiều sâu hơn */
+            filter: blur(2px);
+            z-index: -1; 
+        }
+
+        /* --- Container chính (Ứng dụng hiệu ứng Glassmorphism) --- */
         .translator-container {
-            background-color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.93); /* Nền hộp màu trắng mờ nhẹ */
             width: 90%;
             max-width: 900px;
             padding: 30px;
             border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px); /* Làm mờ nhẹ phần ảnh nền lọt vào trong hộp */
         }
 
         h1 {
@@ -38,14 +61,7 @@
             margin-bottom: 25px;
             color: #2c3e50;
             font-size: 24px;
-        }
-
-
-        h3 {
-            text-align: center;
-            margin-bottom: 25px;
-            color: blue;
-            font-size: 12px;
+            letter-spacing: 0.5px;
         }
 
         /* --- Bố cục các hộp văn bản --- */
@@ -98,7 +114,7 @@
         }
         
         .btn-mic:hover {
-            background-color: #f0f0f0;
+            background-color: rgba(0, 0, 0, 0.05);
         }
 
         .btn-mic.recording {
@@ -116,12 +132,13 @@
             width: 100%;
             height: 200px;
             padding: 15px;
-            border: 2px solid #bdc3c7;
+            border: 2px solid #cbd5e1;
             border-radius: 8px;
             resize: none;
             font-size: 16px;
             outline: none;
             transition: border-color 0.3s ease;
+            background-color: #ffffff;
         }
 
         textarea:focus {
@@ -129,8 +146,8 @@
         }
 
         #output-text {
-            background-color: #f8f9fa;
-            color: #2c3e50;
+            background-color: #f8fafc;
+            color: #1e293b;
         }
 
         /* --- Nút bấm Đảo chiều Ngôn ngữ (Swap) --- */
@@ -170,7 +187,7 @@
             gap: 5px;
             font-size: 13px;
             font-weight: normal;
-            color: #7f8c8d;
+            color: #64748b;
             cursor: pointer;
             user-select: none;
         }
@@ -227,9 +244,9 @@
 
     <div class="translator-container">
         <h1>Ứng Dụng Dịch Thuật Song Phương</h1>
-        <h3>_My translate API_3a</h3>
         
         <div class="boxes-wrapper">
+            <!-- Hộp Nguồn (Mặc định: Tiếng Anh) -->
             <div class="box">
                 <div class="box-header">
                     <span id="label-source">Tiếng Anh</span> 
@@ -239,10 +256,12 @@
                 <textarea id="input-text" placeholder="Nhập văn bản hoặc bấm Micro để nói..."></textarea>
             </div>
             
+            <!-- Nút bấm Đảo Chiều Ở Giữa -->
             <div class="swap-zone">
                 <button class="btn-swap" onclick="swapLanguages()" title="Đổi chiều dịch thuật">⇄</button>
             </div>
             
+            <!-- Hộp Đích (Mặc định: Tiếng Việt) -->
             <div class="box">
                 <div class="box-header">
                     <span id="label-target">Tiếng Việt</span> 
@@ -257,6 +276,7 @@
             </div>
         </div>
 
+        <!-- Nút kích hoạt dịch -->
         <div class="button-zone">
             <button class="btn-translate" onclick="translateText()">Dịch Ngay</button>
         </div>
@@ -264,11 +284,9 @@
 
     <script>
         // Cấu hình URL Google Apps Script của bạn tại đây
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyKO9ySTedNJqJ-uv9MFNtGFC8DPtf3jPP4pV0pL0zIAng661rZ70_YcgUeAmOpdiEI/exec";
-         
-        // Biến toàn cục lưu hướng dịch hiện tại: mặc định 'en-vi' (Anh sang Việt)
-        let currentLangPair = 'en-vi'; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyKO9ySTedNJqJ-uv9MFNtGFC8DPtf3jPP4pV0pL0zIAng661rZ70_YcgUeAmOpdiEI/exec";
         
+        let currentLangPair = 'en-vi'; 
         let recognition;
         let isRecording = false;
 
@@ -276,7 +294,6 @@
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            
             recognition.continuous = false; 
             recognition.interimResults = false; 
 
@@ -301,7 +318,6 @@
             document.getElementById('btn-mic').style.display = 'none';
         }
 
-        // Hàm điều khiển bật tắt Micro (Tự động nhận cấu hình theo hướng dịch hiện tại)
         function toggleSpeechRecognition() {
             if (!recognition) return;
 
@@ -311,8 +327,6 @@
             } else {
                 document.getElementById('input-text').value = "";
                 
-                // Cấu hình mã ngôn ngữ cho Micro dựa theo chiều dịch hiện tại
-                // Nếu 'en-vi' thì Micro nghe tiếng Anh ('en-US'), nếu 'vi-en' thì nghe tiếng Việt ('vi-VN')
                 if (currentLangPair === 'en-vi') {
                     recognition.lang = 'en-US';
                     document.getElementById('input-text').placeholder = "Đang nghe... Hãy nói TIẾNG ANH!";
@@ -340,14 +354,11 @@
 
         // 2. HÀM ĐỔI CHIỀU NGÔN NGỮ ĐỘNG (SWAP)
         function swapLanguages() {
-            // Dừng mọi tiến trình đọc/nói đang chạy dở
             if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             if (isRecording) recognition.stop();
 
-            // Đổi trạng thái biến hướng dịch
             currentLangPair = (currentLangPair === 'en-vi') ? 'vi-en' : 'en-vi';
 
-            // Lấy các phần tử DOM giao diện cần đổi
             const labelSrc = document.getElementById('label-source');
             const labelTgt = document.getElementById('label-target');
             const badgeSrc = document.getElementById('badge-source');
@@ -355,12 +366,10 @@
             const inputTxt = document.getElementById('input-text');
             const outputTxt = document.getElementById('output-text');
 
-            // Hoán đổi nội dung Text hiện tại của 2 ô (nếu có) để người dùng không phải nhập lại
             const tempText = inputTxt.value;
             inputTxt.value = outputTxt.value;
             outputTxt.value = tempText;
 
-            // Cập nhật lại giao diện chữ hiển thị và màu sắc Badge
             if (currentLangPair === 'en-vi') {
                 labelSrc.innerText = "Tiếng Anh";
                 badgeSrc.innerText = "EN";
@@ -380,7 +389,7 @@
             }
         }
 
-        // 3. HÀM DỊCH VĂN BẢN (GỬI ĐÚNG THAM SỐ LANG ĐẾN GOOGLE APPS SCRIPT)
+        // 3. HÀM DỊCH VĂN BẢN
         async function translateText() {
             const inputText = document.getElementById('input-text').value.trim();
             const outputText = document.getElementById('output-text');
@@ -397,7 +406,6 @@
             outputText.value = "Đang dịch...";
 
             try {
-                // Truyền trực tiếp tham số currentLangPair ('en-vi' hoặc 'vi-en') vào API URL
                 const finalUrl = `${GOOGLE_SCRIPT_URL}?q=${encodeURIComponent(inputText)}&lang=${currentLangPair}`;
                 const response = await fetch(finalUrl);
                 const data = await response.json();
@@ -418,7 +426,7 @@
             }
         }
 
-        // 4. HÀM PHÁT ÂM THÔNG MINH (TỰ ĐỘNG CHỌN GIỌNG THEO NGÔN NGỮ ĐÍCH)
+        // 4. HÀM PHÁT ÂM THÔNG MINH
         function speak(text) {
             if ('speechSynthesis' in window && text) {
                 window.speechSynthesis.cancel();
@@ -428,9 +436,6 @@
                 utterance.pitch = 1.0;
 
                 const voices = window.speechSynthesis.getVoices();
-                
-                // Xác định ngôn ngữ đích cần đọc dựa vào currentLangPair
-                // Nếu dịch sang 'vi-en' -> Đích là tiếng Anh ('en'). Ngược lại -> Đích là tiếng Việt ('vi')
                 const targetLangCode = (currentLangPair === 'vi-en') ? 'en' : 'vi';
                 const matchedVoice = voices.find(voice => voice.lang.toLowerCase().includes(targetLangCode));
 
